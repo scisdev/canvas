@@ -3,6 +3,7 @@ import 'package:canvas/canvas/logic/logic.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class TextLayer extends StatelessWidget {
   const TextLayer({Key? key}) : super(key: key);
@@ -19,6 +20,12 @@ class ImageLayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container();
+    /*SizedBox.expand(
+      child: SvgPicture.asset(
+        'assets/test.svg',
+        fit: BoxFit.cover,
+      ),
+    )*/
   }
 }
 
@@ -65,10 +72,28 @@ abstract class Note extends StatelessWidget {
             children: [
               const ImageLayer(),
               const TextLayer(),
-              BlocBuilder<LinePainterCubit, LinesState>(
-                builder: (ctx, state) {
-                  return CustomPaint(
-                    painter: LinesPainter(state.lines),
+              BlocBuilder<ControlCubit, ControlState>(
+                builder: (ctx, controlState) {
+                  return BlocBuilder<LinePainterCubit, LinesState>(
+                    builder: (ctx, state) {
+                      if (controlState == ControlState.draw) {
+                        return CustomPaint(
+                          painter: LinesPainter(state.lines),
+                        );
+                      }
+
+                      if (controlState == ControlState.camera) {
+                        if (state.lines.isNotEmpty) {
+                          return SvgPicture.string(
+                            LinesPainter(state.lines).toSvg(
+                              const Size(200, 200),
+                            ),
+                          );
+                        }
+                      }
+
+                      return const SizedBox();
+                    },
                   );
                 },
               ),
