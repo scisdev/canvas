@@ -18,18 +18,24 @@ class _CanvasState extends State<DrawCanvas> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: BlocBuilder<CanvasCubit, CanvasEmitState>(
-          builder: (ctx, state) => GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              print('doing');
+        child: BlocConsumer<CanvasCubit, CanvasEmitState>(
+          listener: (ctx, state) {
+            if (state.action == CanvasAction.addedTextElement) {
+              final bp = BlocProvider.of<CanvasCubit>(ctx);
+              final element = bp.elements[bp.elements.length - 1];
               Get.to(
                 () => TextPseudoPage(
-                  '',
-                  heroTag: BlocProvider.of<CanvasCubit>(ctx).addTextElement(),
+                  element.view,
+                  heroTag: element.id,
                 ),
                 transition: tt.Transition.fade,
               );
+            }
+          },
+          builder: (ctx, state) => GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              BlocProvider.of<CanvasCubit>(ctx).addTextElement();
             },
             child: SizedBox(
               width: double.infinity,
@@ -38,6 +44,14 @@ class _CanvasState extends State<DrawCanvas> {
                 alignment: Alignment.topCenter,
                 children: BlocProvider.of<CanvasCubit>(ctx)
                     .elements
+                    .map(
+                      (e) => Hero(
+                        tag: e.id,
+                        child: Material(
+                          child: e.view,
+                        ),
+                      ),
+                    )
                     .toList(growable: false),
               ),
             ),

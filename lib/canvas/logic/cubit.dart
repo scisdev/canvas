@@ -18,18 +18,7 @@ class CanvasEmitState {
 }
 
 class CanvasCubit extends Cubit<CanvasEmitState> {
-  CanvasCubit() : super(CanvasEmitState(generation: 0)) {
-    elements.add(
-      CanvasElement(
-        id: idGen.genElementId(ElementType.text),
-        type: ElementType.text,
-        view: const Text(
-          '123121231231231',
-          style: TextStyle(fontSize: 20),
-        ),
-      ),
-    );
-  }
+  CanvasCubit() : super(CanvasEmitState(generation: 0));
 
   final idGen = RandomIdGenerator();
 
@@ -40,10 +29,9 @@ class CanvasCubit extends Cubit<CanvasEmitState> {
   }
 
   String addTextElement() {
-    elements.add(CanvasElement(
+    elements.add(TextCanvasElement(
       id: idGen.genElementId(ElementType.text),
       type: ElementType.text,
-      view: const Text(''),
     ));
 
     emit(
