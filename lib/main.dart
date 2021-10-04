@@ -1,5 +1,8 @@
-import 'package:canvas/canvas/canvas.dart';
+import 'package:canvas/canvas/logic/cubit.dart';
+import 'package:canvas/canvas/view/canvas.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get/get.dart';
 
 void main() {
   runApp(const MyApp());
@@ -9,7 +12,7 @@ class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -29,6 +32,9 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
-    return DrawCanvas();
+    return BlocProvider<CanvasCubit>(
+      create: (ctx) => CanvasCubit(),
+      child: const DrawCanvas(),
+    );
   }
 }
