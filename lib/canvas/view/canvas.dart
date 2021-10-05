@@ -1,10 +1,8 @@
 import 'package:canvas/canvas/logic/cubit.dart';
-import 'package:canvas/canvas/view/text_pseudo_page.dart';
+import 'package:canvas/canvas/view/canvas_element.dart';
+import 'package:canvas/models/element_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get/route_manager.dart';
-
-import 'package:get/get_navigation/src/routes/transitions_type.dart' as tt;
 
 class DrawCanvas extends StatefulWidget {
   const DrawCanvas({Key? key}) : super(key: key);
@@ -20,7 +18,7 @@ class _CanvasState extends State<DrawCanvas> {
       body: SafeArea(
         child: BlocConsumer<CanvasCubit, CanvasEmitState>(
           listener: (ctx, state) {
-            if (state.action == CanvasAction.addedTextElement) {
+            /*if (state.action == CanvasAction.addedTextElement) {
               final bp = BlocProvider.of<CanvasCubit>(ctx);
               final element = bp.elements[bp.elements.length - 1];
               Get.to(
@@ -30,30 +28,36 @@ class _CanvasState extends State<DrawCanvas> {
                 ),
                 transition: tt.Transition.fade,
               );
-            }
+            }*/
           },
-          builder: (ctx, state) => GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              BlocProvider.of<CanvasCubit>(ctx).addTextElement();
-            },
-            child: SizedBox(
-              width: double.infinity,
-              height: double.infinity,
-              child: Stack(
-                alignment: Alignment.topCenter,
-                children: BlocProvider.of<CanvasCubit>(ctx)
-                    .elements
-                    .map(
-                      (e) => Hero(
-                        tag: e.id,
-                        child: Material(
-                          child: e.view,
-                        ),
+          builder: (ctx, state) => SizedBox(
+            width: double.infinity,
+            height: double.infinity,
+            child: Stack(
+              alignment: Alignment.center,
+              children: state.elements
+                  .map<Widget>(
+                    (e) => CanvasElementView(e),
+                  )
+                  .toList()
+                ..add(
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Container(
+                      color: Colors.grey,
+                      width: double.infinity,
+                      height: 80,
+                      child: TextButton(
+                        child: const Text('create new element'),
+                        onPressed: () {
+                          BlocProvider.of<CanvasCubit>(ctx).createNewElement(
+                            ElementType.text,
+                          );
+                        },
                       ),
-                    )
-                    .toList(growable: false),
-              ),
+                    ),
+                  ),
+                ),
             ),
           ),
         ),

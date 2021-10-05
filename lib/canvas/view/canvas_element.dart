@@ -1,51 +1,96 @@
+import 'package:canvas/canvas/logic/cubit.dart';
 import 'package:canvas/models/element_type.dart';
 import 'package:fitted_text_field_container/fitted_text_field_container.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-class CanvasElement {
-  final Widget view;
-  final ElementType type;
+class CanvasElementDescription {
   final String id;
-  final Matrix4? transform;
+  final ElementType type;
+  Offset translation;
+  double scale;
+  double rotation;
 
-  CanvasElement({
-    required this.view,
-    required this.type,
+  CanvasElementDescription({
     required this.id,
-    this.transform,
+    required this.type,
+    required this.translation,
+    required this.rotation,
+    required this.scale,
   });
 }
 
-class TextCanvasElement extends CanvasElement {
-  TextCanvasElement({
-    required ElementType type,
-    required String id,
-    Matrix4? transform,
-  }) : super(
-            id: id,
-            type: type,
-            view: TextCanvasElementView(
-              controller: TextEditingController(),
-              id: id,
-            ),
-            transform: transform);
+class CanvasElementView extends StatelessWidget {
+  final CanvasElementDescription description;
+
+  const CanvasElementView(
+    this.description, {
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        print('on element tap');
+        BlocProvider.of<CanvasCubit>(context).onElementTap(
+          description.id,
+        );
+      },
+      onScaleUpdate: (details) {
+        print('on element scale');
+        BlocProvider.of<CanvasCubit>(context).transformElement(
+          description,
+          details: details,
+        );
+      },
+      /*onPanUpdate: (details) {
+        BlocProvider.of<CanvasCubit>(context).translateElement(
+          description,
+          details: details,
+        );
+      },*/
+      child: Transform(
+        transform: Matrix4.identity()
+          ..translate(description.translation.dx, description.translation.dy)
+          ..rotateZ(description.rotation)
+          ..scale(description.scale),
+        child: getChild(),
+      ),
+    );
+  }
+
+  Widget getChild() {
+    if (description.type == ElementType.text) {
+      return _TextCanvasElementView(id: description.id);
+    }
+
+    return Container();
+  }
 }
 
-class TextCanvasElementView extends StatefulWidget {
-  final TextEditingController controller;
+class _TextCanvasElementView extends StatefulWidget {
   final String id;
 
-  const TextCanvasElementView({
+  const _TextCanvasElementView({
     Key? key,
     required this.id,
-    required this.controller,
   }) : super(key: key);
 
   @override
   _TextCanvasElementViewState createState() => _TextCanvasElementViewState();
 }
 
-class _TextCanvasElementViewState extends State<TextCanvasElementView> {
+class _TextCanvasElementViewState extends State<_TextCanvasElementView> {
+  final c = TextEditingController();
+
+  @override
+  void dispose() {
+    print('disposing');
+    c.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -63,11 +108,10 @@ class _TextCanvasElementViewState extends State<TextCanvasElementView> {
         growCurve: Curves.easeInOut,
         shrinkCurve: Curves.easeInOut,*/
         child: TextField(
+          controller: c,
           minLines: 1,
           maxLines: 5,
-          autofocus: true,
           style: const TextStyle(fontSize: 24, color: Colors.white),
-          controller: widget.controller,
           decoration: const InputDecoration(
             focusedErrorBorder: InputBorder.none,
             border: InputBorder.none,
