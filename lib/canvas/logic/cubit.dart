@@ -2,10 +2,15 @@ import 'dart:math' as math;
 
 import 'package:canvas/canvas/view/canvas_element.dart';
 import 'package:canvas/models/element_type.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-enum CanvasAction { updatedElement, createdElement }
+enum CanvasAction {
+  updateElement,
+  createElement,
+  enterTextEditMode,
+  exitTextEditMode,
+  removeEmptyElements,
+}
 
 class CanvasEmitState {
   final CanvasAction? action;
@@ -36,68 +41,49 @@ class CanvasCubit extends Cubit<CanvasEmitState> {
 
   final _idGen = RandomIdGenerator();
 
-  void createNewElement(ElementType type) {
+  @override
+  Future<void> close() async {
+    await super.close();
+  }
+
+  void addElement(ElementType type) {
     emit(
       CanvasEmitState(
         generation: state.generation + 1,
-        action: CanvasAction.updatedElement,
+        action: CanvasAction.enterTextEditMode,
         elements: state.elements
           ..add(
             CanvasElementDescription(
               type: type,
               id: _idGen.genElementId(type),
-              scale: 1.0,
-              translation: Offset.zero,
-              rotation: 0.0,
             ),
           ),
       ),
     );
   }
 
-  void translateElement(
-    CanvasElementDescription description, {
-    required DragUpdateDetails details,
-  }) {
-    final el = state.elements.firstWhere(
-      (t) => t.id == description.id,
-    );
-
-    el.translation = el.translation + details.delta;
+  void removeElement(String id) {
+    final ind = state.elements.indexWhere((element) => element.id == id);
+    if (ind == -1) return;
 
     emit(
       CanvasEmitState(
         generation: state.generation + 1,
-        action: CanvasAction.updatedElement,
-        elements: state.elements,
+        action: CanvasAction.enterTextEditMode,
+        elements: state.elements..removeAt(ind),
       ),
     );
   }
-
-  void transformElement(CanvasElementDescription description,
-      {required ScaleUpdateDetails details}) {
-    final el = state.elements.firstWhere(
-      (t) => t.id == description.id,
-    );
-
-    el.translation += details.focalPointDelta;
-    el.scale *= details.scale;
-    el.rotation += details.rotation;
-
-    emit(
-      CanvasEmitState(
-        generation: state.generation + 1,
-        action: CanvasAction.updatedElement,
-        elements: state.elements,
-      ),
-    );
-  }
-
-  /*double _getDeltaRotationAngle(ScaleUpdateDetails details) {
-
-  }*/
 
   void onElementTap(String id) {}
+
+  void onEmptyRegionTap() {
+    emit(CanvasEmitState(
+      generation: state.generation + 1,
+      action: CanvasAction.removeEmptyElements,
+      elements: state.elements,
+    ));
+  }
 }
 
 class RandomIdGenerator {

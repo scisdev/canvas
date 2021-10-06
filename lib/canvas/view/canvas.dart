@@ -2,6 +2,7 @@ import 'package:canvas/canvas/logic/cubit.dart';
 import 'package:canvas/canvas/view/canvas_element.dart';
 import 'package:canvas/models/element_type.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class DrawCanvas extends StatefulWidget {
@@ -15,24 +16,16 @@ class _CanvasState extends State<DrawCanvas> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: BlocConsumer<CanvasCubit, CanvasEmitState>(
-          listener: (ctx, state) {
-            /*if (state.action == CanvasAction.addedTextElement) {
-              final bp = BlocProvider.of<CanvasCubit>(ctx);
-              final element = bp.elements[bp.elements.length - 1];
-              Get.to(
-                () => TextPseudoPage(
-                  element.view,
-                  heroTag: element.id,
-                ),
-                transition: tt.Transition.fade,
-              );
-            }*/
-          },
-          builder: (ctx, state) => SizedBox(
-            width: double.infinity,
-            height: double.infinity,
+          listener: (ctx, state) {},
+          builder: (ctx, state) => GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () {
+              FocusScope.of(ctx).unfocus();
+              BlocProvider.of<CanvasCubit>(ctx).onEmptyRegionTap();
+            },
             child: Stack(
               alignment: Alignment.center,
               children: state.elements
@@ -44,20 +37,25 @@ class _CanvasState extends State<DrawCanvas> {
                   Align(
                     alignment: Alignment.bottomCenter,
                     child: Container(
-                      color: Colors.grey,
+                      color: Colors.blue.withAlpha(60),
                       width: double.infinity,
-                      height: 80,
+                      height: 50,
                       child: TextButton(
                         child: const Text('create new element'),
                         onPressed: () {
-                          BlocProvider.of<CanvasCubit>(ctx).createNewElement(
+                          BlocProvider.of<CanvasCubit>(ctx).addElement(
                             ElementType.text,
                           );
                         },
                       ),
                     ),
                   ),
-                ),
+                )
+              /*..add(AnimatedOpacity(
+                  duration: Duration(milliseconds: 450),
+                  opacity: state,
+                ))*/
+              ,
             ),
           ),
         ),

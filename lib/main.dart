@@ -1,4 +1,4 @@
-import 'package:canvas/canvas/logic/cubit.dart';
+import 'package:canvas/canvas/logic/logic.dart';
 import 'package:canvas/canvas/view/canvas.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
