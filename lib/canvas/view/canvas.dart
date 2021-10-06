@@ -22,7 +22,7 @@ class _CanvasState extends State<DrawCanvas> {
           behavior: HitTestBehavior.translucent,
           onTap: () {
             FocusScope.of(context).unfocus();
-            BlocProvider.of<CanvasCubit>(context).onEmptyRegionTap();
+            /*BlocProvider.of<CanvasCubit>(context).onEmptyRegionTap();*/
           },
           child: BlocConsumer<CanvasCubit, CanvasEmitState>(
             listener: (ctx, state) {},
@@ -32,13 +32,15 @@ class _CanvasState extends State<DrawCanvas> {
                 alignment: Alignment.center,
                 children: state.elements.map<Widget>(
                   (e) {
-                    final temd = state.textEditModeDescription;
-                    return AnimatedOpacity(
-                      opacity:
-                          temd.isInEditMode && temd.elementId == e.id ? .4 : 1,
-                      duration: const Duration(milliseconds: 450),
-                      child: CanvasElementView(e),
-                    );
+                    if (e.type == ElementType.text) {
+                      return TextCanvasElement(id: e.id);
+                    }
+
+                    if (e.type == ElementType.image) {
+                      return ImageCanvasElement(id: e.id);
+                    }
+
+                    return Container();
                   },
                 ).toList()
                   ..add(

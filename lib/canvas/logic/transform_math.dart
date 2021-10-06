@@ -203,6 +203,11 @@ class TransformMathCubit extends Cubit<TransformState> {
       emit(state.copyWith(hasActivePointers: false));
     }
   }
+
+  void cancelAll() {
+    tracker1 = tracker2 = null;
+    emit(state.copyWith(hasActivePointers: false));
+  }
 }
 
 class PointerTracker {

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:canvas/canvas/view/canvas_element.dart';
 import 'package:canvas/models/element_type.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 enum CanvasAction {
@@ -11,10 +12,12 @@ enum CanvasAction {
 class TextEditModeDescription {
   final bool isInEditMode;
   final String? elementId;
+  final Matrix4? originalPosition;
 
   const TextEditModeDescription({
     required this.isInEditMode,
     required this.elementId,
+    required this.originalPosition,
   });
 
   @override
@@ -29,13 +32,11 @@ class TextEditModeDescription {
 
 class CanvasEmitState {
   final int gen;
-  final String focusedId;
   final CanvasAction? action;
   final TextEditModeDescription textEditModeDescription;
   List<CanvasElementDescription> elements;
 
   CanvasEmitState._({
-    required this.focusedId,
     required this.gen,
     required this.elements,
     required this.textEditModeDescription,
@@ -49,8 +50,8 @@ class CanvasEmitState {
       textEditModeDescription: const TextEditModeDescription(
         isInEditMode: false,
         elementId: null,
+        originalPosition: null,
       ),
-      focusedId: '',
       action: null,
     );
   }
@@ -78,7 +79,6 @@ class CanvasEmitState {
       action: action ?? this.action,
       textEditModeDescription:
           textEditModeDescription ?? this.textEditModeDescription,
-      focusedId: focusedId ?? this.focusedId,
     );
   }
 }
@@ -114,32 +114,20 @@ class CanvasCubit extends Cubit<CanvasEmitState> {
     ));
   }
 
-  void onElementTap(CanvasElementDescription desc) {
-    onElementFocus(desc);
-    if (desc.type == ElementType.text) {
-      _setTextEditMode(true, elementId: desc.id);
-    }
-  }
-
-  void onElementFocus(CanvasElementDescription desc) {
-    final el = state.elements.firstWhere((f) => f.id == desc.id);
-    emit(state.next(focusedId: el.id));
-  }
-
-  void onEmptyRegionTap() {
-    if (state.textEditModeDescription.isInEditMode) {
-      _setTextEditMode(false);
-    }
-  }
-
-  void _setTextEditMode(bool editMode, {String? elementId}) {
-    emit(state.next(
-      textEditModeDescription: TextEditModeDescription(
-        isInEditMode: editMode,
-        elementId: elementId,
+  void setTextEditMode(
+    bool textEditMode, {
+    String? id,
+    Matrix4? originalPosition,
+  }) {
+    emit(
+      state.next(
+        textEditModeDescription: TextEditModeDescription(
+          originalPosition: originalPosition,
+          isInEditMode: textEditMode,
+          elementId: id,
+        ),
       ),
-      action: editMode ? null : CanvasAction.removeEmptyElements,
-    ));
+    );
   }
 }
 
