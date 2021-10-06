@@ -38,15 +38,12 @@ class CanvasElementView extends StatelessWidget {
             child: Listener(
               behavior: HitTestBehavior.opaque,
               onPointerDown: (details) {
-                print('sending pointer down');
                 BlocProvider.of<TransformMathCubit>(ctx).onPointerDown(details);
               },
               onPointerUp: (details) {
-                print('sending pointer up');
                 BlocProvider.of<TransformMathCubit>(ctx).onPointerUp(details);
               },
               onPointerMove: (details) {
-                print('sending pointer move');
                 BlocProvider.of<TransformMathCubit>(ctx).onPointerMove(details);
               },
               child: getChild(),
@@ -59,7 +56,10 @@ class CanvasElementView extends StatelessWidget {
 
   Widget getChild() {
     if (description.type == ElementType.text) {
-      return _TextCanvasElementView(id: description.id);
+      return _TextCanvasElementView(
+        id: description.id,
+        unselectable: false,
+      );
     }
 
     return Container();
@@ -68,10 +68,12 @@ class CanvasElementView extends StatelessWidget {
 
 class _TextCanvasElementView extends StatefulWidget {
   final String id;
+  final bool unselectable;
 
   const _TextCanvasElementView({
     Key? key,
     required this.id,
+    required this.unselectable,
   }) : super(key: key);
 
   @override
@@ -106,41 +108,44 @@ class _TextCanvasElementViewState extends State<_TextCanvasElementView> {
           BlocProvider.of<CanvasCubit>(ctx).removeElement(widget.id);
         }
       },
-      child: GestureDetector(
-        onTap: () {
-          node.requestFocus();
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: const BoxDecoration(
-            color: Colors.red,
-            borderRadius: BorderRadius.all(Radius.circular(7)),
-          ),
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width - 2 * 40,
-          ),
-          child: FittedTextFieldContainer(
-            /*growDuration: const Duration(milliseconds: 90),
-            shrinkDuration: const Duration(milliseconds: 90),
-            growCurve: Curves.linear,
-            shrinkCurve: Curves.linear,*/
-            child: TextField(
-              onTap: () {
-                print('tapping');
-              },
-              focusNode: node,
-              controller: c,
-              minLines: 1,
-              maxLines: 5,
-              style: const TextStyle(fontSize: 24, color: Colors.white),
-              decoration: const InputDecoration(
-                focusedErrorBorder: InputBorder.none,
-                border: InputBorder.none,
-                errorBorder: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                disabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
+      child: AbsorbPointer(
+        absorbing: widget.unselectable,
+        child: GestureDetector(
+          onTap: () {
+            node.requestFocus();
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: const BoxDecoration(
+              color: Colors.red,
+              borderRadius: BorderRadius.all(Radius.circular(7)),
+            ),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width - 2 * 40,
+            ),
+            child: FittedTextFieldContainer(
+              /*growDuration: const Duration(milliseconds: 90),
+              shrinkDuration: const Duration(milliseconds: 90),
+              growCurve: Curves.linear,
+              shrinkCurve: Curves.linear,*/
+              child: TextField(
+                onTap: () {
+                  print('tapping');
+                },
+                focusNode: node,
+                controller: c,
+                minLines: 1,
+                maxLines: 5,
+                style: const TextStyle(fontSize: 24, color: Colors.white),
+                decoration: const InputDecoration(
+                  focusedErrorBorder: InputBorder.none,
+                  border: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                ),
               ),
             ),
           ),

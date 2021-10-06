@@ -3,26 +3,32 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+enum PointerState { up, down, moving }
+
 class TransformState {
   final Offset translation;
   final double rotationAngle;
   final double scale;
+  final bool hasActivePointers;
 
   TransformState({
     required this.translation,
     required this.rotationAngle,
     required this.scale,
+    required this.hasActivePointers,
   });
 
   TransformState copyWith({
     double? rotationAngle,
     Offset? translation,
     double? scale,
+    bool? hasActivePointers,
   }) {
     return TransformState(
       rotationAngle: rotationAngle ?? this.rotationAngle,
       translation: translation ?? this.translation,
       scale: scale ?? this.scale,
+      hasActivePointers: hasActivePointers ?? this.hasActivePointers,
     );
   }
 
@@ -32,7 +38,8 @@ class TransformState {
       runtimeType == other.runtimeType &&
       translation == other.translation &&
       rotationAngle == other.rotationAngle &&
-      scale == other.scale;
+      scale == other.scale &&
+      hasActivePointers == other.hasActivePointers;
 
   @override
   int get hashCode =>
@@ -40,7 +47,7 @@ class TransformState {
 
   @override
   String toString() {
-    return 'TransformState{translation: $translation, rotationAngle: $rotationAngle, scale: $scale}';
+    return 'TransformState{translation: $translation, rotationAngle: $rotationAngle, scale: $scale, hasActivePointers: $hasActivePointers}';
   }
 }
 
@@ -53,6 +60,7 @@ class TransformMathCubit extends Cubit<TransformState> {
             rotationAngle: 0.0,
             translation: Offset.zero,
             scale: 1.0,
+            hasActivePointers: false,
           ),
         );
 
@@ -137,10 +145,10 @@ class TransformMathCubit extends Cubit<TransformState> {
         translation: Offset(
           (state.translation.dx + x).clamp(
             -halfCanvas.width,
-            halfCanvas.height,
+            halfCanvas.width,
           ),
           (state.translation.dy + y).clamp(
-            -halfCanvas.width,
+            -halfCanvas.height,
             halfCanvas.height,
           ),
         ),
@@ -168,6 +176,8 @@ class TransformMathCubit extends Cubit<TransformState> {
         details.position,
       );
     }
+
+    emit(state.copyWith(hasActivePointers: true));
   }
 
   void onPointerMove(PointerMoveEvent details) {
@@ -187,6 +197,10 @@ class TransformMathCubit extends Cubit<TransformState> {
     }
     if (tracker2?.id == details.pointer) {
       tracker2 = null;
+    }
+
+    if (tracker1 == null && tracker2 == null) {
+      emit(state.copyWith(hasActivePointers: false));
     }
   }
 }
