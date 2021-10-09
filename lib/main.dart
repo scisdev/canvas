@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
 
+import 'canvas/view/draw_layer.dart';
+
 void main() {
   runApp(const MyApp());
 }
@@ -29,12 +31,13 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage>
+    with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<CanvasCubit>(
       create: (ctx) => CanvasCubit(),
-      child: const DrawCanvas(),
+      child: const DrawLayer(),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:canvas/canvas/logic/logic.dart';
 import 'package:canvas/canvas/view/canvas_element.dart';
 import 'package:canvas/models/element_type.dart';
 import 'package:flutter/rendering.dart';
@@ -12,7 +13,7 @@ enum CanvasAction {
 class TextEditModeDescription {
   final bool isInEditMode;
   final String? elementId;
-  final Matrix4? originalPosition;
+  final TransformState? originalPosition;
 
   const TextEditModeDescription({
     required this.isInEditMode,
@@ -117,7 +118,7 @@ class CanvasCubit extends Cubit<CanvasEmitState> {
   void setTextEditMode(
     bool textEditMode, {
     String? id,
-    Matrix4? originalPosition,
+    TransformState? originalPosition,
   }) {
     emit(
       state.next(

@@ -1,67 +1,92 @@
-import 'dart:math' as math;
+import 'package:bezier/bezier.dart';
+import 'package:vector_math/vector_math.dart';
 
 import 'package:flutter/painting.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class DrawLayerCubit extends Cubit<int> {
-  DrawLayerCubit(Size canvasDimensions, double pixelDensity) : super(0) {}
-}
+class DrawLayerCubit extends Cubit<Data> {
+  DrawLayerCubit(Size canvasDimensions)
+      : super(
+          Data(gen: 0, points: [], beziers: []),
+        );
 
-///pixels are laid out FIRST left to right THEN top to bottom
-class Pixel {
-  final int x;
-  final int y;
-  int color = 0;
+  Color selectedColor = const Color(0xffff0000);
 
-  Pixel(this.x, this.y);
-}
-
-class PixelUtils {
-  static List<Pixel> getPixelsInGivenCircularRange(
-    int cx,
-    int cy,
-    int r,
-    CanvasData data,
-  ) {
-    final left = math.max(0, cx - r);
-    final right = math.min(data.width, cx + r);
-    final top = math.max(0, cy - r);
-    final bottom = math.min(data.height, cy + r);
-
-    var res = <Pixel>[];
-
-    for (var y = top; y < bottom; y++) {
-      for (var x = left; x < right; x++) {
-        final fx = abs(x - cx);
-        final fy = abs(y - cy);
-        if (fx * fx + fy * fy < r * r) {
-          res.add(getPixel(x, y, data));
-        }
-      }
-    }
-
-    return res;
-  }
-
-  static int abs(int x) {
-    if (x >= 0) return x;
-
-    return -x;
-  }
-
-  static Pixel getPixel(int x, int y, CanvasData data) {
-    return data.pixels[y * data.width + x];
+  void addPoint(Offset coords) {
+    state.addPoint(Point(color: selectedColor, coords: coords));
+    emit(state.next());
   }
 }
 
-class CanvasData {
-  final int width;
-  final int height;
-  final List<Pixel> pixels;
+class Point {
+  final Offset coords;
+  final Color color;
 
-  CanvasData({
-    required this.width,
-    required this.height,
-    required this.pixels,
+  Point({
+    required this.coords,
+    required this.color,
   });
+}
+
+class Data {
+  final int gen;
+  List<Point> points = [];
+  List<Bezier> beziers = [];
+
+  Data({
+    required this.gen,
+    required this.points,
+    required this.beziers,
+  });
+
+  Data next() {
+    return Data(points: points, beziers: beziers, gen: gen + 1);
+  }
+
+  void addPoint(Point point) {
+    points.add(point);
+    if (points.length == 3) {
+      beziers.add(QuadraticBezier(
+        [
+          points[0].coords.toVec(),
+          points[1].coords.toVec(),
+          points[2].coords.toVec(),
+        ],
+      ));
+    } else if (points.length > 3) {
+      final vec = Vector2(
+          (points[points.length - 2].coords.dx +
+                  points[points.length - 3].coords.dx) /
+              2,
+          (points[points.length - 2].coords.dy +
+                  points[points.length - 3].coords.dy) /
+              2);
+      beziers[beziers.length - 1] = (QuadraticBezier(
+        [
+          points[points.length - 4].coords.toVec(),
+          points[points.length - 3].coords.toVec(),
+          vec
+        ],
+      ));
+      beziers.add(QuadraticBezier(
+        [
+          vec,
+          points[points.length - 2].coords.toVec(),
+          points[points.length - 1].coords.toVec(),
+        ],
+      ));
+    }
+  }
+}
+
+extension OffsetX on Offset {
+  Vector2 toVec() {
+    return Vector2(dx, dy);
+  }
+}
+
+extension Vec2X on Vector2 {
+  Offset toOffset() {
+    return Offset(x, y);
+  }
 }

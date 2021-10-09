@@ -56,7 +56,9 @@ class _TextCanvasElementState extends State<TextCanvasElement>
   @override
   Widget build(BuildContext context) {
     return BlocProvider<TransformMathCubit>(
-      create: (ctx) => TransformMathCubit(MediaQuery.of(context).size),
+      create: (ctx) {
+        return TransformMathCubit(MediaQuery.of(context).size);
+      },
       child: BlocConsumer<TransformMathCubit, TransformState>(
         listener: (ctx, state) {
           //todo
@@ -75,6 +77,7 @@ class _TextCanvasElementState extends State<TextCanvasElement>
                     c.text.isEmpty) {
                   BlocProvider.of<CanvasCubit>(ctx).removeElement(widget.id);
                 }
+                onEditMode(context, state);
               },
               builder: (ctx, canvasState) {
                 return GestureDetector(
@@ -82,7 +85,7 @@ class _TextCanvasElementState extends State<TextCanvasElement>
                     BlocProvider.of<CanvasCubit>(ctx).setTextEditMode(
                       true,
                       id: widget.id,
-                      originalPosition: Matrix4.copy(matrix),
+                      originalPosition: transformState.copyWith(),
                     );
                   },
                   child: AbsorbPointer(
@@ -90,6 +93,9 @@ class _TextCanvasElementState extends State<TextCanvasElement>
                     child: Listener(
                       behavior: HitTestBehavior.opaque,
                       onPointerDown: (details) {
+                        if (controller.isAnimating) {
+                          controller.stop(canceled: false);
+                        }
                         if (node.hasFocus) {
                           BlocProvider.of<TransformMathCubit>(ctx).cancelAll();
                         } else {
@@ -97,21 +103,25 @@ class _TextCanvasElementState extends State<TextCanvasElement>
                               .onPointerDown(details);
                         }
                       },
-                      onPointerUp: (details) {
-                        if (node.hasFocus) {
-                          BlocProvider.of<TransformMathCubit>(ctx).cancelAll();
-                        } else {
-                          BlocProvider.of<TransformMathCubit>(ctx)
-                              .onPointerUp(details);
-                        }
-                      },
                       onPointerMove: (details) {
+                        if (controller.isAnimating) {
+                          controller.stop(canceled: false);
+                        }
+
                         if (node.hasFocus) {
                           BlocProvider.of<TransformMathCubit>(ctx).cancelAll();
                         } else {
                           BlocProvider.of<TransformMathCubit>(ctx)
                               .onPointerMove(details);
                         }
+                      },
+                      onPointerUp: (details) {
+                        if (controller.isAnimating) {
+                          controller.stop(canceled: false);
+                        }
+
+                        BlocProvider.of<TransformMathCubit>(ctx)
+                            .onPointerUp(details);
                       },
                       child: textContainer(),
                     ),
@@ -161,6 +171,45 @@ class _TextCanvasElementState extends State<TextCanvasElement>
         ),
       ),
     );
+  }
+
+  void onEditMode(BuildContext context, CanvasEmitState state) {
+    if (state.textEditModeDescription.isInEditMode != lastEditState) {
+      void listen() {
+        if (state.textEditModeDescription.originalPosition == null) return;
+
+        BlocProvider.of<TransformMathCubit>(context).emit(
+          TransformState(
+            translation:
+                state.textEditModeDescription.originalPosition!.translation *
+                    controller.value,
+            scale: state.textEditModeDescription.originalPosition!.scale *
+                controller.value,
+            hasActivePointers: false,
+            rotationAngle:
+                state.textEditModeDescription.originalPosition!.rotationAngle *
+                    controller.value,
+          ),
+        );
+      }
+
+      lastEditState = state.textEditModeDescription.isInEditMode;
+
+      if (controller.isAnimating) {
+        controller.stop(canceled: false);
+      }
+
+      controller.addListener(listen);
+      if (state.textEditModeDescription.isInEditMode) {
+        controller.reverse().then((_) {
+          controller.removeListener(listen);
+        });
+      } else {
+        controller.forward().then((_) {
+          controller.removeListener(listen);
+        });
+      }
+    }
   }
 }
 

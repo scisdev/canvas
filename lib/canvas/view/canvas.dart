@@ -22,7 +22,7 @@ class _CanvasState extends State<DrawCanvas> {
           behavior: HitTestBehavior.translucent,
           onTap: () {
             FocusScope.of(context).unfocus();
-            /*BlocProvider.of<CanvasCubit>(context).onEmptyRegionTap();*/
+            BlocProvider.of<CanvasCubit>(context).setTextEditMode(false);
           },
           child: BlocConsumer<CanvasCubit, CanvasEmitState>(
             listener: (ctx, state) {},
