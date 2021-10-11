@@ -3,6 +3,7 @@ import 'package:canvas/canvas/view/canvas.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
+import 'package:hand_signature/signature.dart';
 
 import 'canvas/view/draw_layer.dart';
 
@@ -33,11 +34,46 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage>
     with SingleTickerProviderStateMixin {
+  final control = HandSignatureControl(
+    threshold: 10.0,
+    smoothRatio: 1,
+    velocityRange: 1.0,
+  );
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider<CanvasCubit>(
       create: (ctx) => CanvasCubit(),
-      child: const DrawLayer(),
+      child: Material(
+        child: Column(
+          children: [
+            Expanded(
+              child: SizedBox.expand(
+                child: HandSignaturePainterView(
+                  control: control,
+                  color: Colors.red,
+                  width: 1.0,
+                  maxWidth: 30.0,
+                  type: SignatureDrawType.shape,
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 80,
+              width: double.infinity,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  control.stepBack();
+                },
+                child: const Center(
+                  child: Text('Step back'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
