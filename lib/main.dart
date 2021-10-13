@@ -1,5 +1,4 @@
 import 'package:canvas/canvas/logic/logic.dart';
-import 'package:canvas/canvas/view/canvas.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
@@ -44,35 +43,39 @@ class _MyHomePageState extends State<MyHomePage>
   Widget build(BuildContext context) {
     return BlocProvider<CanvasCubit>(
       create: (ctx) => CanvasCubit(),
-      child: Material(
-        child: Column(
-          children: [
-            Expanded(
-              child: SizedBox.expand(
-                child: HandSignaturePainterView(
-                  control: control,
-                  color: Colors.red,
-                  width: 1.0,
-                  maxWidth: 30.0,
-                  type: SignatureDrawType.shape,
-                ),
+      child: const DrawLayer(),
+    );
+  }
+
+  Widget libCanvas() {
+    return Material(
+      child: Column(
+        children: [
+          Expanded(
+            child: SizedBox.expand(
+              child: HandSignaturePainterView(
+                control: control,
+                color: Colors.red,
+                width: 1.0,
+                maxWidth: 30.0,
+                type: SignatureDrawType.shape,
               ),
             ),
-            SizedBox(
-              height: 80,
-              width: double.infinity,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  control.stepBack();
-                },
-                child: const Center(
-                  child: Text('Step back'),
-                ),
+          ),
+          SizedBox(
+            height: 80,
+            width: double.infinity,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                control.stepBack();
+              },
+              child: const Center(
+                child: Text('Step back'),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

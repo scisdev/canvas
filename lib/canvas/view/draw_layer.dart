@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import 'package:bezier/bezier.dart';
 import 'package:canvas/canvas/logic/draw_layer_logic.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -22,13 +21,14 @@ class DrawLayer extends StatelessWidget {
               painter: TestPainter(state),
             ),
           ),
-          onPointerMove: (details) {
+          /*onPointerMove: (details) {
             BlocProvider.of<DrawLayerCubit>(ctx)
                 .addPoint(details.localPosition);
-          },
+          },*/
           onPointerDown: (details) {
-            BlocProvider.of<DrawLayerCubit>(ctx)
-                .addPoint(details.localPosition);
+            BlocProvider.of<DrawLayerCubit>(ctx).addPoint(
+              details.localPosition,
+            );
           },
         ),
       ),
@@ -43,24 +43,20 @@ class TestPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (data.beziers.isEmpty) return;
-
-    var start = data.beziers[0].points;
-    var path = Path();
-    path.moveTo(start[0].x, start[0].y);
-    for (var element in data.beziers) {
-      path.quadraticBezierTo(
-        element.points[1].x,
-        element.points[1].y,
-        element.points[2].x,
-        element.points[2].y,
-      );
+    final path = Path();
+    for (final t in data.beziers) {
+      path.addPath(t.getDrawPath(), const Offset(0, 0));
     }
-    canvas.drawPath(
-        path,
-        Paint()
-          ..color = Colors.red
-          ..strokeWidth = 10);
+
+    canvas.drawPath(path, Paint()..color = Colors.red);
+
+    canvas.drawPoints(
+      PointMode.points,
+      data.points.map((e) => e.coords).toList(),
+      Paint()
+        ..color = Colors.blue
+        ..strokeWidth = 10,
+    );
   }
 
   @override
