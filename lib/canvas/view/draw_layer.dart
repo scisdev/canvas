@@ -50,13 +50,13 @@ class TestPainter extends CustomPainter {
 
     canvas.drawPath(path, Paint()..color = Colors.red);
 
-    canvas.drawPoints(
+    /*canvas.drawPoints(
       PointMode.points,
       data.points.map((e) => e.coords).toList(),
       Paint()
         ..color = Colors.blue
         ..strokeWidth = 10,
-    );
+    );*/
   }
 
   @override

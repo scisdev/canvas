@@ -150,7 +150,7 @@ class Bezier extends CanvasDrawElement {
     final ac = (control.dy - yCross) / (control.dx - xCross);
     final bc = control.dy - ac * control.dx;
 
-    final averageThickness = (endThickness + startThickness) / 2;
+    final averageThickness = (endThickness + startThickness) >> 1;
 
     final deltaXc =
         math.sqrt(averageThickness * averageThickness / (4 * (1 + ac * ac)));
@@ -159,7 +159,7 @@ class Bezier extends CanvasDrawElement {
 
     return Path()
       ..moveTo(start.dx - deltaX1, y1Minus)
-      ..lineTo(start.dx + deltaX2, y1Plus)
+      ..lineTo(start.dx + deltaX1, y1Plus)
       ..quadraticBezierTo(
         control.dx + deltaXc,
         ycPlus,
