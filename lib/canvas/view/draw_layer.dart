@@ -1,10 +1,6 @@
-import 'dart:ui';
-
-import 'package:canvas/canvas/logic/draw_layer_logic.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 class DrawLayer extends StatefulWidget {
   const DrawLayer({Key? key}) : super(key: key);
@@ -16,11 +12,13 @@ class DrawLayer extends StatefulWidget {
 class _DrawLayerState extends State<DrawLayer> {
   double currentThickness = 10.0;
   Color currentColor = Colors.cyanAccent;
+  int? currentPointerId;
+  Line tmpLine = Line.empty();
 
+  String text = 'LINE';
   final thicknessDelta = .01;
   final points = <Offset>[];
-  //final lines = <Line>[];
-  final paths = <Path>[];
+  final lines = <Line>[];
 
   Paint get currentPaint {
     return Paint()
@@ -32,56 +30,94 @@ class _DrawLayerState extends State<DrawLayer> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (ctx) => DrawLayerCubit(
-        MediaQuery.of(context).size,
-      ),
-      child: BlocBuilder<DrawLayerCubit, Data>(
-        builder: (ctx, state) => Listener(
-          behavior: HitTestBehavior.opaque,
-          child: SizedBox.expand(
-            child: CustomPaint(
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: onDown,
+      onPointerMove: onMove,
+      onPointerUp: onUp,
+      child: SizedBox.expand(
+        child: Stack(
+          children: [
+            CustomPaint(
               isComplex: true,
-              painter: TestPainter(paths),
+              painter: TestPainter(lines, tmpLine),
             ),
-          ),
-          onPointerDown: onDown,
-          onPointerMove: onMove,
-          onPointerUp: onUp,
+            Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: double.infinity,
+                height: 80,
+                child: Center(
+                  child: Text(text),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   void onDown(PointerDownEvent event) {
-    /*lines.add(Line(
-      bezier: Bezier.zero(),
-      paint: currentPaint,
-    ));*/
+    if (currentPointerId != null) return;
 
+    currentPointerId = event.pointer;
     points.add(event.localPosition);
-    paths.add(Path()..moveTo(event.localPosition.dx, event.localPosition.dy));
+    lines.add(
+      Line(
+        path: Path()..moveTo(event.localPosition.dx, event.localPosition.dy),
+        paint: currentPaint,
+      ),
+    );
 
     setState(() {});
   }
 
   void onMove(PointerMoveEvent event) {
+    if (event.pointer != currentPointerId) return;
+
     points.add(event.localPosition);
 
+    if ((points[points.length - 2] - event.localPosition).distance > 2.5) {
+      addBezier();
+      text = 'BEZIER';
+    } else {
+      addLine();
+      text = 'LINE';
+    }
+
+    setState(() {});
+  }
+
+  void addLine() {
+    final path = Path()
+      ..moveTo(
+        points[points.length - 2].dx,
+        points[points.length - 2].dy,
+      )
+      ..lineTo(
+        points[points.length - 1].dx,
+        points[points.length - 1].dy,
+      );
+    lines[lines.length - 1].path.addPath(path, Offset.zero);
+
+    tmpLine = Line(path: path, paint: currentPaint);
+  }
+
+  void addBezier() {
     if (points.length < 3) return;
 
     if (points.length == 3) {
-      /*lines[lines.length - 1].bezier = Bezier(
-        start: points[0],
-        control: points[1],
-        end: points[2],
-      );*/
-      paths[paths.length - 1].moveTo(points[0].dx, points[0].dy);
-      paths[paths.length - 1].quadraticBezierTo(
-        points[1].dx,
-        points[1].dy,
-        points[2].dx,
-        points[2].dy,
+      tmpLine = Line(
+        path: Path()
+          ..moveTo(points[0].dx, points[0].dy)
+          ..quadraticBezierTo(
+            points[1].dx,
+            points[1].dy,
+            points[2].dx,
+            points[2].dy,
+          ),
+        paint: currentPaint,
       );
       return;
     }
@@ -94,57 +130,11 @@ class _DrawLayerState extends State<DrawLayer> {
       ),
     );
 
-    paths[paths.length - 1].moveTo(
-      points[points.length - 5].dx,
-      points[points.length - 5].dy,
-    );
-    paths[paths.length - 1].quadraticBezierTo(
-      points[points.length - 4].dx,
-      points[points.length - 4].dy,
-      points[points.length - 3].dx,
-      points[points.length - 3].dy,
-    );
-
-    paths[paths.length - 1].moveTo(
-      points[points.length - 3].dx,
-      points[points.length - 3].dy,
-    );
-    paths[paths.length - 1].quadraticBezierTo(
-      points[points.length - 2].dx,
-      points[points.length - 2].dy,
-      points[points.length - 1].dx,
-      points[points.length - 1].dy,
-    );
-
-    /*lines.removeLast();
-
-    lines.add(
-      Line(
-        bezier: Bezier(
-          start: points[points.length - 5],
-          control: points[points.length - 4],
-          end: points[points.length - 3],
-        ),
-        paint: currentPaint,
-      ),
-    );
-
-    lines.add(
-      Line(
-        bezier: Bezier(
-          start: points[points.length - 3],
-          control: points[points.length - 2],
-          end: points[points.length - 1],
-        ),
-        paint: currentPaint,
-      ),
-    );*/
-
-    /*lines[lines.length - 1].bezier.moveTo(
+    //lines[lines.length - 1].path.addPath(tmpLine.path, Offset.zero);
+    lines[lines.length - 1].path.moveTo(
           points[points.length - 5].dx,
           points[points.length - 5].dy,
         );
-
     lines[lines.length - 1].path.quadraticBezierTo(
           points[points.length - 4].dx,
           points[points.length - 4].dy,
@@ -152,22 +142,28 @@ class _DrawLayerState extends State<DrawLayer> {
           points[points.length - 3].dy,
         );
 
-    lines[lines.length - 1].path.moveTo(
+    tmpLine = Line(
+      path: Path()
+        ..moveTo(
           points[points.length - 3].dx,
           points[points.length - 3].dy,
-        );
-
-    lines[lines.length - 1].path.quadraticBezierTo(
+        )
+        ..quadraticBezierTo(
           points[points.length - 2].dx,
           points[points.length - 2].dy,
           points[points.length - 1].dx,
           points[points.length - 1].dy,
-        );*/
-
-    setState(() {});
+        ),
+      paint: currentPaint,
+    );
   }
 
   void onUp(PointerUpEvent event) {
+    if (currentPointerId != event.pointer) return;
+
+    lines[lines.length - 1].path.addPath(tmpLine.path, Offset.zero);
+    tmpLine = Line.empty();
+    currentPointerId = null;
     points.clear();
     setState(() {});
     //lines.clear();
@@ -175,27 +171,17 @@ class _DrawLayerState extends State<DrawLayer> {
 }
 
 class TestPainter extends CustomPainter {
-  final List<Path> paths;
+  final List<Line> lines;
+  final Line tmpLine;
 
-  TestPainter(this.paths);
+  TestPainter(this.lines, this.tmpLine);
 
   @override
   void paint(Canvas canvas, Size size) {
-    for (final p in paths) {
-      canvas.drawPath(
-        p,
-        Paint()
-          ..color = Colors.red
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 10,
-      );
-    }
-    /*final p = Path();
-    canvas.restore();
+    canvas.drawPath(tmpLine.path, tmpLine.paint);
     for (final l in lines) {
-      canvas.drawPath(l.bezier.getPath(), l.paint);
+      canvas.drawPath(l.path, l.paint);
     }
-    canvas.save();*/
   }
 
   @override
@@ -204,34 +190,16 @@ class TestPainter extends CustomPainter {
   }
 }
 
-class Bezier {
-  final Offset start;
-  final Offset control;
-  final Offset end;
-
-  Bezier({
-    required this.start,
-    required this.control,
-    required this.end,
-  });
-
-  factory Bezier.zero() {
-    return Bezier(start: Offset.zero, control: Offset.zero, end: Offset.zero);
-  }
-
-  Path getPath() {
-    return Path()
-      ..moveTo(start.dx, start.dy)
-      ..quadraticBezierTo(control.dx, control.dy, end.dx, end.dy);
-  }
-}
-
 class Line {
-  Bezier bezier;
+  final Path path;
   final Paint paint;
 
   Line({
-    required this.bezier,
+    required this.path,
     required this.paint,
   });
+
+  factory Line.empty() {
+    return Line(path: Path(), paint: Paint());
+  }
 }
