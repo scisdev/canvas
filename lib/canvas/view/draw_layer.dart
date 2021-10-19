@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 class DrawLayer extends StatefulWidget {
@@ -13,7 +14,8 @@ class _DrawLayerState extends State<DrawLayer> {
   double currentThickness = 10.0;
   Color currentColor = Colors.cyanAccent;
   int? currentPointerId;
-  Line tmpLine = Line.empty();
+  LineType currentLineType = LineType.marker;
+  Line tmpLine = Line.marker();
 
   String text = 'LINE';
   final thicknessDelta = .01;
@@ -29,31 +31,109 @@ class _DrawLayerState extends State<DrawLayer> {
   }
 
   @override
+  void initState() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Listener(
-      behavior: HitTestBehavior.opaque,
-      onPointerDown: onDown,
-      onPointerMove: onMove,
-      onPointerUp: onUp,
-      child: SizedBox.expand(
-        child: Stack(
-          children: [
-            CustomPaint(
-              isComplex: true,
-              painter: TestPainter(lines, tmpLine),
+    return SizedBox.expand(
+      child: Column(
+        children: [
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: Material(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      child: SizedBox.expand(
+                        child: IconButton(
+                          icon: const Icon(Icons.settings_backup_restore),
+                          onPressed: () {
+                            if (lines.isNotEmpty) {
+                              setState(() {
+                                lines.removeLast();
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      child: SizedBox.expand(
+                        child: IconButton(
+                          icon: Text(
+                            'MARKER',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: currentLineType == LineType.marker
+                                  ? Colors.red
+                                  : Colors.black,
+                            ),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              currentLineType = LineType.marker;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      child: SizedBox.expand(
+                        child: IconButton(
+                          icon: Text(
+                            'ERASER',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: currentLineType == LineType.eraser
+                                  ? Colors.red
+                                  : Colors.black,
+                            ),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              currentLineType = LineType.eraser;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: Text(text),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            Align(
-              alignment: Alignment.topCenter,
-              child: SizedBox(
-                width: double.infinity,
-                height: 80,
-                child: Center(
-                  child: Text(text),
+          ),
+          Expanded(
+            child: Listener(
+              behavior: HitTestBehavior.opaque,
+              onPointerDown: onDown,
+              onPointerMove: onMove,
+              onPointerUp: onUp,
+              child: SizedBox.expand(
+                child: CustomPaint(
+                  isComplex: true,
+                  painter: TestPainter(lines, tmpLine),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -67,6 +147,7 @@ class _DrawLayerState extends State<DrawLayer> {
       Line(
         path: Path()..moveTo(event.localPosition.dx, event.localPosition.dy),
         paint: currentPaint,
+        type: currentLineType,
       ),
     );
 
@@ -78,7 +159,9 @@ class _DrawLayerState extends State<DrawLayer> {
 
     points.add(event.localPosition);
 
-    if ((points[points.length - 2] - event.localPosition).distance > 2.5) {
+    final dst = (points[points.length - 2] - event.localPosition).distance;
+
+    if (dst > 2.5) {
       addBezier();
       text = 'BEZIER';
     } else {
@@ -90,18 +173,12 @@ class _DrawLayerState extends State<DrawLayer> {
   }
 
   void addLine() {
-    final path = Path()
-      ..moveTo(
-        points[points.length - 2].dx,
-        points[points.length - 2].dy,
-      )
-      ..lineTo(
-        points[points.length - 1].dx,
-        points[points.length - 1].dy,
-      );
-    lines[lines.length - 1].path.addPath(path, Offset.zero);
+    lines[lines.length - 1].path.lineTo(
+          points[points.length - 1].dx,
+          points[points.length - 1].dy,
+        );
 
-    tmpLine = Line(path: path, paint: currentPaint);
+    tmpLine = Line(path: Path(), paint: currentPaint, type: currentLineType);
   }
 
   void addBezier() {
@@ -155,6 +232,7 @@ class _DrawLayerState extends State<DrawLayer> {
           points[points.length - 1].dy,
         ),
       paint: currentPaint,
+      type: currentLineType,
     );
   }
 
@@ -162,7 +240,7 @@ class _DrawLayerState extends State<DrawLayer> {
     if (currentPointerId != event.pointer) return;
 
     lines[lines.length - 1].path.addPath(tmpLine.path, Offset.zero);
-    tmpLine = Line.empty();
+    tmpLine = Line.marker();
     currentPointerId = null;
     points.clear();
     setState(() {});
@@ -193,13 +271,25 @@ class TestPainter extends CustomPainter {
 class Line {
   final Path path;
   final Paint paint;
+  final LineType? type;
 
   Line({
     required this.path,
     required this.paint,
+    this.type,
   });
 
   factory Line.empty() {
     return Line(path: Path(), paint: Paint());
   }
+
+  factory Line.marker() {
+    return Line(path: Path(), paint: Paint(), type: LineType.marker);
+  }
+
+  factory Line.eraser() {
+    return Line(path: Path(), paint: Paint(), type: LineType.eraser);
+  }
 }
+
+enum LineType { marker, eraser }
