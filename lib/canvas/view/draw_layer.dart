@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
@@ -11,24 +13,16 @@ class DrawLayer extends StatefulWidget {
 }
 
 class _DrawLayerState extends State<DrawLayer> {
-  double currentThickness = 10.0;
-  Color currentColor = Colors.cyanAccent;
-  int? currentPointerId;
-  LineType currentLineType = LineType.marker;
-  Line tmpLine = Line.marker();
+  PaintDescription pd = const PaintDescription(
+    widthBase: 10,
+    maskFilter: MaskFilter.blur(BlurStyle.solid, 5.0),
+    color: Colors.yellowAccent,
+    type: LineType.marker,
+  );
+  final paint = Paint();
 
-  String text = 'LINE';
-  final thicknessDelta = .01;
-  final points = <Offset>[];
+  bool skip = false;
   final lines = <Line>[];
-
-  Paint get currentPaint {
-    return Paint()
-      ..color = currentColor
-      ..strokeWidth = currentThickness
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-  }
 
   @override
   void initState() {
@@ -73,14 +67,14 @@ class _DrawLayerState extends State<DrawLayer> {
                             'MARKER',
                             style: TextStyle(
                               fontSize: 16,
-                              color: currentLineType == LineType.marker
+                              color: pd.type == LineType.marker
                                   ? Colors.red
                                   : Colors.black,
                             ),
                           ),
                           onPressed: () {
                             setState(() {
-                              currentLineType = LineType.marker;
+                              pd = pd.copyWith(type: LineType.marker);
                             });
                           },
                         ),
@@ -96,23 +90,18 @@ class _DrawLayerState extends State<DrawLayer> {
                             'ERASER',
                             style: TextStyle(
                               fontSize: 16,
-                              color: currentLineType == LineType.eraser
+                              color: pd.type == LineType.eraser
                                   ? Colors.red
                                   : Colors.black,
                             ),
                           ),
                           onPressed: () {
                             setState(() {
-                              currentLineType = LineType.eraser;
+                              pd = pd.copyWith(type: LineType.eraser);
                             });
                           },
                         ),
                       ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text(text),
                     ),
                   ),
                 ],
@@ -120,15 +109,15 @@ class _DrawLayerState extends State<DrawLayer> {
             ),
           ),
           Expanded(
-            child: Listener(
+            child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onPointerDown: onDown,
-              onPointerMove: onMove,
-              onPointerUp: onUp,
+              onPanStart: onDown,
+              onPanUpdate: onMove,
+              onPanEnd: onUp,
               child: SizedBox.expand(
                 child: CustomPaint(
                   isComplex: true,
-                  painter: TestPainter(lines, tmpLine),
+                  painter: TestPainter(paint, lines),
                 ),
               ),
             ),
@@ -138,127 +127,74 @@ class _DrawLayerState extends State<DrawLayer> {
     );
   }
 
-  void onDown(PointerDownEvent event) {
-    if (currentPointerId != null) return;
-
-    currentPointerId = event.pointer;
-    points.add(event.localPosition);
-    lines.add(
-      Line(
-        path: Path()..moveTo(event.localPosition.dx, event.localPosition.dy),
-        paint: currentPaint,
-        type: currentLineType,
-      ),
-    );
+  void onDown(DragStartDetails event) {
+    lines.add(Line(
+      pd: pd,
+      points: [event.localPosition],
+    ));
 
     setState(() {});
   }
 
-  void onMove(PointerMoveEvent event) {
-    if (event.pointer != currentPointerId) return;
-
-    points.add(event.localPosition);
-
-    final dst = (points[points.length - 2] - event.localPosition).distance;
-
-    if (dst > 2.5) {
-      addBezier();
-      text = 'BEZIER';
-    } else {
-      addLine();
-      text = 'LINE';
-    }
-
-    setState(() {});
-  }
-
-  void addLine() {
-    lines[lines.length - 1].path.lineTo(
-          points[points.length - 1].dx,
-          points[points.length - 1].dy,
-        );
-
-    tmpLine = Line(path: Path(), paint: currentPaint, type: currentLineType);
-  }
-
-  void addBezier() {
-    if (points.length < 3) return;
-
-    if (points.length == 3) {
-      tmpLine = Line(
-        path: Path()
-          ..moveTo(points[0].dx, points[0].dy)
-          ..quadraticBezierTo(
-            points[1].dx,
-            points[1].dy,
-            points[2].dx,
-            points[2].dy,
-          ),
-        paint: currentPaint,
-      );
+  void onMove(DragUpdateDetails event) {
+    if (skip) {
+      skip = false;
       return;
+    } else {
+      skip = true;
     }
 
-    points.insert(
-      points.length - 2,
-      Offset(
-        (points[points.length - 2].dx + points[points.length - 3].dx) / 2,
-        (points[points.length - 2].dy + points[points.length - 3].dy) / 2,
-      ),
-    );
-
-    //lines[lines.length - 1].path.addPath(tmpLine.path, Offset.zero);
-    lines[lines.length - 1].path.moveTo(
-          points[points.length - 5].dx,
-          points[points.length - 5].dy,
-        );
-    lines[lines.length - 1].path.quadraticBezierTo(
-          points[points.length - 4].dx,
-          points[points.length - 4].dy,
-          points[points.length - 3].dx,
-          points[points.length - 3].dy,
-        );
-
-    tmpLine = Line(
-      path: Path()
-        ..moveTo(
-          points[points.length - 3].dx,
-          points[points.length - 3].dy,
-        )
-        ..quadraticBezierTo(
-          points[points.length - 2].dx,
-          points[points.length - 2].dy,
-          points[points.length - 1].dx,
-          points[points.length - 1].dy,
-        ),
-      paint: currentPaint,
-      type: currentLineType,
-    );
+    lines[lines.length - 1].points.add(event.localPosition);
+    setState(() {});
   }
 
-  void onUp(PointerUpEvent event) {
-    if (currentPointerId != event.pointer) return;
-
-    lines[lines.length - 1].path.addPath(tmpLine.path, Offset.zero);
-    tmpLine = Line.marker();
-    currentPointerId = null;
-    points.clear();
+  void onUp(DragEndDetails event) {
     setState(() {});
-    //lines.clear();
   }
 }
 
 class TestPainter extends CustomPainter {
   final List<Line> lines;
-  final Line tmpLine;
+  final Paint p;
 
-  TestPainter(this.lines, this.tmpLine);
+  TestPainter(this.p, this.lines);
 
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.drawPath(tmpLine.path, tmpLine.paint);
-    for (final l in lines) {
-      canvas.drawPath(l.path, l.paint);
+    for (final line in lines) {
+      p
+        ..strokeWidth = line.pd.widthBase
+        ..maskFilter = line.pd.maskFilter
+        ..color = line.pd.color
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..blendMode = line.pd.type == LineType.marker
+            ? BlendMode.srcOver
+            : BlendMode.dstOut;
+
+      if (line.points.length == 1) {
+        canvas.drawPoints(
+          PointMode.points,
+          [line.points[0]],
+          p,
+        );
+        continue;
+      }
+
+      final path = Path();
+      for (var i = 0; i < line.points.length - 2; i++) {
+        final p1 = (line.points[i] + line.points[i + 1]) / 2;
+        final p2 = (line.points[i + 1] + line.points[i + 2]) / 2;
+        path.moveTo(p1.dx, p1.dy);
+        path.quadraticBezierTo(
+          line.points[i + 1].dx,
+          line.points[i + 1].dy,
+          p2.dx,
+          p2.dy,
+        );
+      }
+
+      canvas.drawPath(path, p);
     }
   }
 
@@ -269,27 +205,41 @@ class TestPainter extends CustomPainter {
 }
 
 class Line {
-  final Path path;
-  final Paint paint;
-  final LineType? type;
+  final PaintDescription pd;
+  final List<Offset> points;
 
   Line({
-    required this.path,
-    required this.paint,
-    this.type,
+    required this.points,
+    required this.pd,
   });
-
-  factory Line.empty() {
-    return Line(path: Path(), paint: Paint());
-  }
-
-  factory Line.marker() {
-    return Line(path: Path(), paint: Paint(), type: LineType.marker);
-  }
-
-  factory Line.eraser() {
-    return Line(path: Path(), paint: Paint(), type: LineType.eraser);
-  }
 }
 
 enum LineType { marker, eraser }
+
+class PaintDescription {
+  final LineType type;
+  final Color color;
+  final MaskFilter maskFilter;
+  final double widthBase;
+
+  const PaintDescription({
+    required this.type,
+    required this.color,
+    required this.maskFilter,
+    required this.widthBase,
+  });
+
+  PaintDescription copyWith({
+    LineType? type,
+    Color? color,
+    MaskFilter? maskFilter,
+    double? widthBase,
+  }) {
+    return PaintDescription(
+      type: type ?? this.type,
+      color: color ?? this.color,
+      maskFilter: maskFilter ?? this.maskFilter,
+      widthBase: widthBase ?? this.widthBase,
+    );
+  }
+}
